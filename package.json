@@ -1,0 +1,45 @@
+{
+  "name": "@anml-foundation/server",
+  "version": "0.1.0",
+  "description": "ANML 1.0 server SDK for Node.js/TypeScript — build, serialize, and serve ANML duckuments",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "import": "./dist/index.js", "types": "./dist/index.d.ts" },
+    "./express": { "import": "./dist/adapters/express.js", "types": "./dist/adapters/express.d.ts" },
+    "./fastify": { "import": "./dist/adapters/fastify.js", "types": "./dist/adapters/fastify.d.ts" },
+    "./http": { "import": "./dist/adapters/http.js", "types": "./dist/adapters/http.d.ts" }
+  },
+  "files": ["dist", "LICENSE", "README.md"],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "lint": "eslint src/",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": ["anml", "agent", "agentic", "server", "sdk", "markup", "duckument"],
+  "author": "ANML Foundation",
+  "license": "ISC",
+  "repository": { "type": "git", "url": "https://github.com/ANML-Foundation/anml-server-node.git" },
+  "homepage": "https://anmlfoundation.org",
+  "engines": { "node": ">=18.0.0" },
+  "dependencies": {
+    "fast-xml-parser": "4.5.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.3",
+    "@types/express": "5.0.0",
+    "typescript": "5.7.3",
+    "vitest": "3.1.1",
+    "express": "4.21.2"
+  },
+  "peerDependencies": {
+    "express": ">=4.0.0",
+    "fastify": ">=4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "express": { "optional": true },
+    "fastify": { "optional": true }
+  }
+}
