@@ -114,8 +114,8 @@ export {
 export type { TrustRecord, TrustVerificationResult } from "./trust.js";
 
 // Middleware
-export { anmlMiddleware, anmlFastifyPlugin } from "./middleware.js";
-export type { AnmlMiddlewareOptions } from "./middleware.js";
+export { anmlMiddleware, anmlFastifyPlugin, anmlDiscovery, anmlHandler } from "./middleware.js";
+export type { AnmlMiddlewareOptions, DiscoveryOptions } from "./middleware.js";
 
 // Errors
 export {

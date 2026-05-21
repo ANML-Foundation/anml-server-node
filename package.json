@@ -1,7 +1,7 @@
 {
   "name": "@anml-foundation/server",
   "version": "0.1.0",
-  "description": "ANML 1.0 server SDK for Node.js/TypeScript — document builder, serialization, discovery, and validation",
+  "description": "ANML 1.0 server SDK for Node.js/TypeScript — build, validate, and serve ANML duckuments",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

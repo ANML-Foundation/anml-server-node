@@ -129,3 +129,49 @@ export async function anmlFastifyPlugin(
     });
   }
 }
+
+// ─── Convenience Helpers (Express) ───────────────────────────────────────────
+
+export interface DiscoveryOptions {
+  /** URL path for the ANML document (default: /.well-known/anml) */
+  url?: string;
+}
+
+/**
+ * Express middleware that adds a Link header advertising ANML support
+ * to all responses.
+ *
+ * Usage:
+ *   app.use(anmlDiscovery({ url: '/.well-known/anml' }));
+ */
+export function anmlDiscovery(options?: DiscoveryOptions) {
+  const url = options?.url ?? WELL_KNOWN_PATH;
+  return (_req: ExpressRequest, res: ExpressResponse, next: ExpressNext): void => {
+    res.set("Link", linkHeader(url));
+    next();
+  };
+}
+
+/**
+ * Express route handler that serves an ANML document with content negotiation.
+ *
+ * Usage:
+ *   app.get('/.well-known/anml', anmlHandler(async (req) => {
+ *     return AnmlDocument.builder().title('My Service').build();
+ *   }));
+ */
+export function anmlHandler(
+  buildDoc: (req: unknown) => AnmlDocument | Promise<AnmlDocument>
+) {
+  return async (req: ExpressRequest, res: ExpressResponse, next: ExpressNext): Promise<void> => {
+    try {
+      const doc = await buildDoc(req);
+      const accept = req.get?.("Accept") ?? (req.headers?.accept as string) ?? "";
+      const contentType = negotiateContentType(accept);
+      const content = contentType === CONTENT_TYPE_XML ? toXml(doc) : toJson(doc);
+      res.status(200).type(contentType).send(content);
+    } catch (err) {
+      next(err);
+    }
+  };
+}
