@@ -1,5 +1,5 @@
 /**
- * ANML 1.0 Serialization — XML and JSON output with content negotiation.
+ * ANML 1.0 Serialization — XML and JSON output.
  */
 
 import { XMLBuilder } from "fast-xml-parser";
@@ -13,9 +13,9 @@ import type {
   Step,
 } from "./types.js";
 
-const ANML_NAMESPACE = "urn:ietf:params:xml:ns:anml:1.0";
-const CONTENT_TYPE_XML = "application/anml+xml";
-const CONTENT_TYPE_JSON = "application/anml+json";
+export const ANML_NAMESPACE = "urn:ietf:params:xml:ns:anml:1.0";
+export const CONTENT_TYPE_XML = "application/anml+xml";
+export const CONTENT_TYPE_JSON = "application/anml+json";
 
 // ─── JSON Serialization ──────────────────────────────────────────────────────
 
@@ -28,16 +28,13 @@ export function toJson(doc: AnmlDocument): string {
 }
 
 function buildJsonObject(doc: AnmlDocument): Record<string, unknown> {
-  const obj: Record<string, unknown> = {
-    anml: doc.version,
-  };
+  const obj: Record<string, unknown> = { anml: doc.version };
 
   if (doc.lang) obj.lang = doc.lang;
   if (doc.ttl !== undefined) obj.ttl = doc.ttl;
   if (doc.role) obj.role = doc.role;
   if (doc.supportedVersions) obj["supported-versions"] = doc.supportedVersions;
 
-  // Head
   if (doc.head) {
     const head: Record<string, unknown> = {};
     if (doc.head.title) head.title = doc.head.title;
@@ -47,7 +44,6 @@ function buildJsonObject(doc: AnmlDocument): Record<string, unknown> {
     obj.head = head;
   }
 
-  // Constraints
   if (doc.constraints?.disclosure && doc.constraints.disclosure.length > 0) {
     obj.constraints = {
       disclosure: doc.constraints.disclosure.map((d) => ({
@@ -57,28 +53,19 @@ function buildJsonObject(doc: AnmlDocument): Record<string, unknown> {
     };
   }
 
-  // State
   if (doc.state) {
     const state: Record<string, unknown> = {};
-    if (doc.state.context) {
-      state.context = { step: doc.state.context.step };
-    }
+    if (doc.state.context) state.context = { step: doc.state.context.step };
     if (doc.state.flow) {
-      state.flow = {
-        step: doc.state.flow.step.map((s) => buildStepJson(s)),
-      };
+      state.flow = { step: doc.state.flow.step.map((s) => buildStepJson(s)) };
     }
     obj.state = state;
   }
 
-  // Interact
   if (doc.interact?.action && doc.interact.action.length > 0) {
-    obj.interact = {
-      action: doc.interact.action.map((a) => buildActionJson(a)),
-    };
+    obj.interact = { action: doc.interact.action.map((a) => buildActionJson(a)) };
   }
 
-  // Knowledge
   if (doc.knowledge) {
     const knowledge: Record<string, unknown> = {};
     if (doc.knowledge.inform && doc.knowledge.inform.length > 0) {
@@ -89,15 +76,13 @@ function buildJsonObject(doc: AnmlDocument): Record<string, unknown> {
     }
     if (doc.knowledge.answer && doc.knowledge.answer.length > 0) {
       knowledge.answer = doc.knowledge.answer.map((a) => ({
-        field: a.field,
-        value: a.value,
+        field: a.field, value: a.value,
         ...(a.consent ? { consent: a.consent } : {}),
       }));
     }
     if (doc.knowledge.refuse && doc.knowledge.refuse.length > 0) {
       knowledge.refuse = doc.knowledge.refuse.map((r) => ({
-        field: r.field,
-        reason: r.reason,
+        field: r.field, reason: r.reason,
         ...(r.constraint ? { constraint: r.constraint } : {}),
         ...(r.message ? { message: r.message } : {}),
       }));
@@ -105,7 +90,6 @@ function buildJsonObject(doc: AnmlDocument): Record<string, unknown> {
     obj.knowledge = knowledge;
   }
 
-  // Persona
   if (doc.persona) {
     const persona: Record<string, unknown> = {};
     if (doc.persona.model) persona.model = doc.persona.model;
@@ -117,13 +101,10 @@ function buildJsonObject(doc: AnmlDocument): Record<string, unknown> {
     obj.persona = persona;
   }
 
-  // Aesthetic
   if (doc.aesthetic) {
     const aesthetic: Record<string, unknown> = {};
     if (doc.aesthetic.displayName) aesthetic["display-name"] = doc.aesthetic.displayName;
-    if (doc.aesthetic.logo && doc.aesthetic.logo.length > 0) {
-      aesthetic.logo = doc.aesthetic.logo;
-    }
+    if (doc.aesthetic.logo && doc.aesthetic.logo.length > 0) aesthetic.logo = doc.aesthetic.logo;
     if (doc.aesthetic.colors && doc.aesthetic.colors.length > 0) {
       aesthetic.colors = { color: doc.aesthetic.colors };
     }
@@ -133,28 +114,20 @@ function buildJsonObject(doc: AnmlDocument): Record<string, unknown> {
     obj.aesthetic = aesthetic;
   }
 
-  // Body
-  if (doc.body) {
-    obj.body = buildBodyJson(doc.body);
-  }
+  if (doc.body) obj.body = buildBodyJson(doc.body);
 
-  // Footer
   if (doc.footer) {
     const footer: Record<string, unknown> = {};
-    if (doc.footer.rights) {
-      footer.rights = { ...doc.footer.rights };
-    }
+    if (doc.footer.rights) footer.rights = { ...doc.footer.rights };
     if (doc.footer.attribution && doc.footer.attribution.length > 0) {
       footer.attribution = doc.footer.attribution;
     }
     obj.footer = footer;
   }
 
-  // Status
   if (doc.status) {
     obj.status = {
-      code: doc.status.code,
-      result: doc.status.result,
+      code: doc.status.code, result: doc.status.result,
       ...(doc.status.message ? { message: doc.status.message } : {}),
       ...(doc.status.retryAfter !== undefined ? { "retry-after": doc.status.retryAfter } : {}),
     };
@@ -176,10 +149,7 @@ function buildStepJson(s: Step): Record<string, unknown> {
 }
 
 function buildActionJson(a: Action): Record<string, unknown> {
-  const obj: Record<string, unknown> = {
-    id: a.id,
-    endpoint: a.endpoint,
-  };
+  const obj: Record<string, unknown> = { id: a.id, endpoint: a.endpoint };
   if (a.method) obj.method = a.method;
   if (a.auth) obj.auth = a.auth;
   if (a.enctype) obj.enctype = a.enctype;
@@ -209,8 +179,7 @@ function buildInformJson(i: Inform): Record<string, unknown> {
 
 function buildAskJson(a: Ask): Record<string, unknown> {
   return {
-    field: a.field,
-    action: a.action,
+    field: a.field, action: a.action,
     ...(a.required !== undefined ? { required: a.required } : {}),
     ...(a.purpose ? { purpose: a.purpose } : {}),
     ...(a.type ? { type: a.type } : {}),
@@ -252,7 +221,6 @@ function buildSectionJson(s: BodySection): Record<string, unknown> {
  */
 export function toXml(doc: AnmlDocument): string {
   const xmlObj = buildXmlObject(doc);
-
   const builder = new XMLBuilder({
     ignoreAttributes: false,
     attributeNamePrefix: "@_",
@@ -261,50 +229,38 @@ export function toXml(doc: AnmlDocument): string {
     suppressEmptyNode: true,
     suppressBooleanAttributes: false,
   });
-
   const xmlBody = builder.build(xmlObj) as string;
   return `<?xml version="1.0" encoding="UTF-8"?>\n${xmlBody}`;
 }
 
 function buildXmlObject(doc: AnmlDocument): Record<string, unknown> {
-  const anml: Record<string, unknown> = {
-    "@_xmlns": ANML_NAMESPACE,
-  };
+  const anml: Record<string, unknown> = { "@_xmlns": ANML_NAMESPACE };
 
   if (doc.ttl !== undefined) anml["@_ttl"] = doc.ttl;
   if (doc.lang) anml["@_lang"] = doc.lang;
   if (doc.role) anml["@_role"] = doc.role;
   if (doc.supportedVersions) anml["@_supported-versions"] = doc.supportedVersions;
 
-  // Head
   if (doc.head) {
     const head: Record<string, unknown> = {};
     if (doc.head.title) head.title = doc.head.title;
     if (doc.head.meta && doc.head.meta.length > 0) {
-      head.meta = doc.head.meta.map((m) => ({
-        "@_name": m.name,
-        "@_value": m.value,
-      }));
+      head.meta = doc.head.meta.map((m) => ({ "@_name": m.name, "@_value": m.value }));
     }
     anml.head = head;
   }
 
-  // Constraints
   if (doc.constraints?.disclosure && doc.constraints.disclosure.length > 0) {
     anml.constraints = {
       disclosure: doc.constraints.disclosure.map((d) => ({
-        "@_field": d.field,
-        "@_requires": d.requires,
+        "@_field": d.field, "@_requires": d.requires,
       })),
     };
   }
 
-  // State
   if (doc.state) {
     const state: Record<string, unknown> = {};
-    if (doc.state.context) {
-      state.context = { step: doc.state.context.step };
-    }
+    if (doc.state.context) state.context = { step: doc.state.context.step };
     if (doc.state.flow) {
       state.flow = {
         step: doc.state.flow.step.map((s) => {
@@ -322,14 +278,10 @@ function buildXmlObject(doc: AnmlDocument): Record<string, unknown> {
     anml.state = state;
   }
 
-  // Interact
   if (doc.interact?.action && doc.interact.action.length > 0) {
     anml.interact = {
       action: doc.interact.action.map((a) => {
-        const actionObj: Record<string, unknown> = {
-          "@_id": a.id,
-          "@_endpoint": a.endpoint,
-        };
+        const actionObj: Record<string, unknown> = { "@_id": a.id, "@_endpoint": a.endpoint };
         if (a.method) actionObj["@_method"] = a.method;
         if (a.auth) actionObj["@_auth"] = a.auth;
         if (a.enctype) actionObj["@_enctype"] = a.enctype;
@@ -352,7 +304,6 @@ function buildXmlObject(doc: AnmlDocument): Record<string, unknown> {
     };
   }
 
-  // Knowledge
   if (doc.knowledge) {
     const knowledge: Record<string, unknown> = {};
     if (doc.knowledge.inform && doc.knowledge.inform.length > 0) {
@@ -365,10 +316,7 @@ function buildXmlObject(doc: AnmlDocument): Record<string, unknown> {
     }
     if (doc.knowledge.ask && doc.knowledge.ask.length > 0) {
       knowledge.ask = doc.knowledge.ask.map((a) => {
-        const askObj: Record<string, unknown> = {
-          "@_field": a.field,
-          "@_action": a.action,
-        };
+        const askObj: Record<string, unknown> = { "@_field": a.field, "@_action": a.action };
         if (a.required !== undefined) askObj["@_required"] = String(a.required);
         if (a.purpose) askObj["@_purpose"] = a.purpose;
         if (a.type) askObj["@_type"] = a.type;
@@ -377,15 +325,13 @@ function buildXmlObject(doc: AnmlDocument): Record<string, unknown> {
     }
     if (doc.knowledge.answer && doc.knowledge.answer.length > 0) {
       knowledge.answer = doc.knowledge.answer.map((a) => ({
-        "@_field": a.field,
-        "@_value": a.value,
+        "@_field": a.field, "@_value": a.value,
         ...(a.consent ? { "@_consent": a.consent } : {}),
       }));
     }
     if (doc.knowledge.refuse && doc.knowledge.refuse.length > 0) {
       knowledge.refuse = doc.knowledge.refuse.map((r) => ({
-        "@_field": r.field,
-        "@_reason": r.reason,
+        "@_field": r.field, "@_reason": r.reason,
         ...(r.constraint ? { "@_constraint": r.constraint } : {}),
         ...(r.message ? { "@_message": r.message } : {}),
       }));
@@ -393,7 +339,6 @@ function buildXmlObject(doc: AnmlDocument): Record<string, unknown> {
     anml.knowledge = knowledge;
   }
 
-  // Persona
   if (doc.persona) {
     const persona: Record<string, unknown> = {};
     if (doc.persona.model) {
@@ -426,7 +371,6 @@ function buildXmlObject(doc: AnmlDocument): Record<string, unknown> {
     anml.persona = persona;
   }
 
-  // Aesthetic
   if (doc.aesthetic) {
     const aesthetic: Record<string, unknown> = {};
     if (doc.aesthetic.displayName) aesthetic["display-name"] = doc.aesthetic.displayName;
@@ -440,17 +384,13 @@ function buildXmlObject(doc: AnmlDocument): Record<string, unknown> {
     }
     if (doc.aesthetic.colors && doc.aesthetic.colors.length > 0) {
       aesthetic.colors = {
-        color: doc.aesthetic.colors.map((c) => ({
-          "@_role": c.role,
-          "@_value": c.value,
-        })),
+        color: doc.aesthetic.colors.map((c) => ({ "@_role": c.role, "@_value": c.value })),
       };
     }
     if (doc.aesthetic.typography && doc.aesthetic.typography.length > 0) {
       aesthetic.typography = {
         font: doc.aesthetic.typography.map((f) => ({
-          "@_role": f.role,
-          "@_family": f.family,
+          "@_role": f.role, "@_family": f.family,
           ...(f.fallback ? { "@_fallback": f.fallback } : {}),
         })),
       };
@@ -458,12 +398,8 @@ function buildXmlObject(doc: AnmlDocument): Record<string, unknown> {
     anml.aesthetic = aesthetic;
   }
 
-  // Body
-  if (doc.body) {
-    anml.body = buildBodyXml(doc.body);
-  }
+  if (doc.body) anml.body = buildBodyXml(doc.body);
 
-  // Footer
   if (doc.footer) {
     const footer: Record<string, unknown> = {};
     if (doc.footer.rights) {
@@ -486,11 +422,9 @@ function buildXmlObject(doc: AnmlDocument): Record<string, unknown> {
     anml.footer = footer;
   }
 
-  // Status
   if (doc.status) {
     anml.status = {
-      "@_code": doc.status.code,
-      "@_result": doc.status.result,
+      "@_code": doc.status.code, "@_result": doc.status.result,
       ...(doc.status.message ? { "@_message": doc.status.message } : {}),
       ...(doc.status.retryAfter !== undefined ? { "@_retry-after": doc.status.retryAfter } : {}),
     };
@@ -574,48 +508,12 @@ function buildSectionXml(s: BodySection): Record<string, unknown> {
   return obj;
 }
 
-// ─── Content Negotiation ─────────────────────────────────────────────────────
-
-export interface NegotiatedResponse {
-  content: string;
-  contentType: string;
-}
-
 /**
- * Negotiate the best serialization format based on the Accept header.
- * Defaults to JSON if no preference is expressed.
+ * Serialize a document based on content type string.
  */
-export function negotiate(doc: AnmlDocument, acceptHeader: string): NegotiatedResponse {
-  const normalized = acceptHeader.toLowerCase();
-
-  // Parse accept header entries with q-values
-  const entries = normalized.split(",").map((entry) => {
-    const parts = entry.trim().split(";");
-    const type = parts[0]!.trim();
-    let q = 1.0;
-    for (const part of parts.slice(1)) {
-      const match = part.trim().match(/^q\s*=\s*([\d.]+)$/);
-      if (match) {
-        q = parseFloat(match[1]!);
-      }
-    }
-    return { type, q };
-  });
-
-  // Sort by q-value descending
-  entries.sort((a, b) => b.q - a.q);
-
-  for (const entry of entries) {
-    if (entry.type === CONTENT_TYPE_XML || entry.type === "application/xml") {
-      return { content: toXml(doc), contentType: CONTENT_TYPE_XML };
-    }
-    if (entry.type === CONTENT_TYPE_JSON || entry.type === "application/json") {
-      return { content: toJson(doc), contentType: CONTENT_TYPE_JSON };
-    }
+export function serialize(doc: AnmlDocument, contentType: string): string {
+  if (contentType.includes("xml")) {
+    return toXml(doc);
   }
-
-  // Default to JSON for agent consumption
-  return { content: toJson(doc), contentType: CONTENT_TYPE_JSON };
+  return toJson(doc);
 }
-
-export { CONTENT_TYPE_XML, CONTENT_TYPE_JSON, ANML_NAMESPACE };

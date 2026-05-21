@@ -1,22 +1,29 @@
 /**
  * Fluent document builder for constructing valid ANML 1.0 duckuments.
+ *
+ * Usage:
+ *   import { AnmlDocument } from '@anml-foundation/server';
+ *   const doc = AnmlDocument.builder().title('My Service').build();
  */
 
 import type {
-  AnmlDocument,
+  AnmlDocument as AnmlDocumentType,
   Action,
-  Ask,
   Aesthetic,
   Body,
   Constraints,
   Disclosure,
   DisclosureRequirement,
   FieldType,
-  Flow,
   Footer,
   Head,
   HttpMethod,
-  Inform,
+  ImageElement,
+  AudioElement,
+  VideoElement,
+  LinkElement,
+  DataElement,
+  NavElement,
   Interact,
   Knowledge,
   Param,
@@ -25,12 +32,6 @@ import type {
   Step,
   StepStatus,
   UsageRight,
-  ImageElement,
-  AudioElement,
-  VideoElement,
-  LinkElement,
-  DataElement,
-  NavElement,
 } from "./types.js";
 import { toXml, toJson } from "./serializer.js";
 
@@ -74,7 +75,7 @@ export interface AskInput {
 }
 
 export interface MediaInput {
-  mediaType: string;
+  type: string;
   description?: string;
   alt?: string;
   integrity?: string;
@@ -83,17 +84,58 @@ export interface MediaInput {
 export interface PersonaInput {
   tone?: string;
   instructions?: string;
+  brandColor?: string;
+  logoUrl?: string;
   model?: { name?: string; provider?: string; capability?: string };
   language?: { value?: string; policy?: "native" | "match" | "fixed" };
   voice?: { perspective?: "first" | "third"; name?: string };
   vocabulary?: { prefer?: string[]; avoid?: string[] };
 }
 
-export interface BrandInput {
-  name?: string;
-  logoUrl?: string;
-  color?: string;
-  iconUrl?: string;
+// ─── Built Document (with convenience methods) ───────────────────────────────
+
+export class AnmlDocumentInstance {
+  private readonly _doc: AnmlDocumentType;
+
+  constructor(doc: AnmlDocumentType) {
+    this._doc = doc;
+  }
+
+  /** Get the raw document data. */
+  get data(): AnmlDocumentType {
+    return this._doc;
+  }
+
+  // Proxy all document properties
+  get version() { return this._doc.version; }
+  get role() { return this._doc.role; }
+  get ttl() { return this._doc.ttl; }
+  get lang() { return this._doc.lang; }
+  get head() { return this._doc.head; }
+  get constraints() { return this._doc.constraints; }
+  get state() { return this._doc.state; }
+  get interact() { return this._doc.interact; }
+  get knowledge() { return this._doc.knowledge; }
+  get persona() { return this._doc.persona; }
+  get aesthetic() { return this._doc.aesthetic; }
+  get body() { return this._doc.body; }
+  get footer() { return this._doc.footer; }
+  get status() { return this._doc.status; }
+
+  /** Serialize to XML. */
+  toXml(): string {
+    return toXml(this._doc);
+  }
+
+  /** Serialize to JSON. */
+  toJson(): string {
+    return toJson(this._doc);
+  }
+
+  /** Static factory to create a builder. */
+  static builder(): DocumentBuilder {
+    return new DocumentBuilder();
+  }
 }
 
 // ─── Builder ─────────────────────────────────────────────────────────────────
@@ -111,42 +153,32 @@ export class DocumentBuilder {
   private _body?: Body;
   private _footer?: Footer;
 
-  /**
-   * Set the document title.
-   */
+  /** Set the document title. */
   title(title: string): this {
     this._head.title = title;
     return this;
   }
 
-  /**
-   * Set the document TTL in seconds.
-   */
+  /** Set the document TTL in seconds. */
   ttl(seconds: number): this {
     this._ttl = seconds;
     return this;
   }
 
-  /**
-   * Set the document language (BCP 47 tag).
-   */
+  /** Set the document language (BCP 47 tag). */
   lang(lang: string): this {
     this._lang = lang;
     return this;
   }
 
-  /**
-   * Add a meta entry to the head section.
-   */
+  /** Add a meta entry to the head section. */
   meta(name: string, value: string): this {
     if (!this._head.meta) this._head.meta = [];
     this._head.meta.push({ name, value });
     return this;
   }
 
-  /**
-   * Set persona/behavioral guidance.
-   */
+  /** Set persona/behavioral guidance. */
   persona(opts: PersonaInput): this {
     this._persona = {
       ...(opts.tone ? { tone: { value: opts.tone } } : {}),
@@ -156,30 +188,23 @@ export class DocumentBuilder {
       ...(opts.voice ? { voice: opts.voice } : {}),
       ...(opts.vocabulary ? { vocabulary: opts.vocabulary } : {}),
     };
-    return this;
-  }
 
-  /**
-   * Set brand/aesthetic information.
-   */
-  brand(opts: BrandInput): this {
-    this._aesthetic = {
-      ...(opts.name ? { displayName: opts.name } : {}),
-      ...(opts.logoUrl
-        ? { logo: [{ src: opts.logoUrl, alt: opts.name ?? "Logo" }] }
-        : {}),
-      ...(opts.color ? { colors: [{ role: "primary", value: opts.color }] } : {}),
-    };
-    if (opts.iconUrl) {
-      if (!this._aesthetic.logo) this._aesthetic.logo = [];
-      this._aesthetic.logo.push({ src: opts.iconUrl, alt: "Icon", variant: "icon" });
+    // Handle brandColor and logoUrl as aesthetic shortcuts
+    if (opts.brandColor || opts.logoUrl) {
+      if (!this._aesthetic) this._aesthetic = {};
+      if (opts.brandColor) {
+        this._aesthetic.colors = [{ role: "primary", value: opts.brandColor }];
+      }
+      if (opts.logoUrl) {
+        if (!this._aesthetic.logo) this._aesthetic.logo = [];
+        this._aesthetic.logo.push({ src: opts.logoUrl, alt: "Logo" });
+      }
     }
+
     return this;
   }
 
-  /**
-   * Add a disclosure constraint.
-   */
+  /** Add a disclosure constraint. */
   disclosure(field: string, opts?: { requires?: DisclosureRequirement }): this {
     if (!this._constraints) this._constraints = { disclosure: [] };
     if (!this._constraints.disclosure) this._constraints.disclosure = [];
@@ -190,9 +215,7 @@ export class DocumentBuilder {
     return this;
   }
 
-  /**
-   * Define the workflow flow steps.
-   */
+  /** Define the workflow flow steps. */
   flow(steps: StepInput[]): this {
     if (!this._state) this._state = {};
     this._state.flow = {
@@ -209,18 +232,14 @@ export class DocumentBuilder {
     return this;
   }
 
-  /**
-   * Set the current context step.
-   */
+  /** Set the current context step. */
   context(step: string): this {
     if (!this._state) this._state = {};
     this._state.context = { step };
     return this;
   }
 
-  /**
-   * Add an action to the interact section.
-   */
+  /** Add an action to the interact section. */
   action(id: string, opts: ActionInput): this {
     if (!this._interact) this._interact = { action: [] };
     if (!this._interact.action) this._interact.action = [];
@@ -248,9 +267,7 @@ export class DocumentBuilder {
     return this;
   }
 
-  /**
-   * Add an inform element to the knowledge section.
-   */
+  /** Add an inform element to the knowledge section. */
   inform(content: string, opts?: { confidentiality?: string; ttl?: number }): this {
     if (!this._knowledge) this._knowledge = {};
     if (!this._knowledge.inform) this._knowledge.inform = [];
@@ -262,9 +279,7 @@ export class DocumentBuilder {
     return this;
   }
 
-  /**
-   * Add an ask element to the knowledge section.
-   */
+  /** Add an ask element to the knowledge section. */
   ask(field: string, opts: AskInput): this {
     if (!this._knowledge) this._knowledge = {};
     if (!this._knowledge.ask) this._knowledge.ask = [];
@@ -278,24 +293,20 @@ export class DocumentBuilder {
     return this;
   }
 
-  /**
-   * Add a media element (image) to the body.
-   */
+  /** Add a media element (image) to the body. */
   media(url: string, opts: MediaInput): this {
     if (!this._body) this._body = {};
     if (!this._body.img) this._body.img = [];
     this._body.img.push({
       src: url,
-      type: opts.mediaType,
+      type: opts.type,
       ...(opts.description ? { description: opts.description } : {}),
       ...(opts.alt ? { alt: opts.alt } : {}),
     });
     return this;
   }
 
-  /**
-   * Add an image element to the body.
-   */
+  /** Add an image element to the body. */
   image(img: ImageElement): this {
     if (!this._body) this._body = {};
     if (!this._body.img) this._body.img = [];
@@ -303,9 +314,7 @@ export class DocumentBuilder {
     return this;
   }
 
-  /**
-   * Add an audio element to the body.
-   */
+  /** Add an audio element to the body. */
   audio(audio: AudioElement): this {
     if (!this._body) this._body = {};
     if (!this._body.audio) this._body.audio = [];
@@ -313,9 +322,7 @@ export class DocumentBuilder {
     return this;
   }
 
-  /**
-   * Add a video element to the body.
-   */
+  /** Add a video element to the body. */
   video(video: VideoElement): this {
     if (!this._body) this._body = {};
     if (!this._body.video) this._body.video = [];
@@ -323,9 +330,7 @@ export class DocumentBuilder {
     return this;
   }
 
-  /**
-   * Add a link element to the body.
-   */
+  /** Add a link element to the body. */
   link(link: LinkElement): this {
     if (!this._body) this._body = {};
     if (!this._body.link) this._body.link = [];
@@ -333,9 +338,7 @@ export class DocumentBuilder {
     return this;
   }
 
-  /**
-   * Add a data element to the body.
-   */
+  /** Add a data element to the body. */
   data(data: DataElement): this {
     if (!this._body) this._body = {};
     if (!this._body.data) this._body.data = [];
@@ -343,101 +346,60 @@ export class DocumentBuilder {
     return this;
   }
 
-  /**
-   * Set navigation/pagination on the body.
-   */
+  /** Set navigation/pagination on the body. */
   nav(nav: NavElement): this {
     if (!this._body) this._body = {};
     this._body.nav = nav;
     return this;
   }
 
-  /**
-   * Set the usage rights level.
-   */
+  /** Set the usage rights level. */
   rights(level: UsageRight): this {
     if (!this._footer) this._footer = {};
     this._footer.rights = { usage: level };
     return this;
   }
 
-  /**
-   * Set full rights with holder and year.
-   */
-  fullRights(opts: { holder: string; year: string; usage: UsageRight; license?: string }): this {
-    if (!this._footer) this._footer = {};
-    this._footer.rights = {
-      holder: opts.holder,
-      year: opts.year,
-      usage: opts.usage,
-      ...(opts.license ? { license: opts.license } : {}),
-    };
-    return this;
-  }
-
-  /**
-   * Set the body content as plain text.
-   */
+  /** Set the body content as plain text. */
   body(content: string): this {
     if (!this._body) this._body = {};
     this._body.content = content;
     return this;
   }
 
-  /**
-   * Build the final AnmlDocument.
-   */
-  build(): AnmlDocument {
-    const doc: AnmlDocument = {
-      version: "1.0",
-    };
+  /** Build the final AnmlDocument instance with convenience methods. */
+  build(): AnmlDocumentInstance {
+    const doc: AnmlDocumentType = { version: "1.0" };
 
     if (this._ttl !== undefined) doc.ttl = this._ttl;
     if (this._lang) doc.lang = this._lang;
 
-    // Head
     if (this._head.title || (this._head.meta && this._head.meta.length > 0)) {
       doc.head = this._head;
     }
-
-    // Constraints
     if (this._constraints) doc.constraints = this._constraints;
-
-    // State
     if (this._state) doc.state = this._state;
-
-    // Interact
     if (this._interact) doc.interact = this._interact;
-
-    // Knowledge
     if (this._knowledge) doc.knowledge = this._knowledge;
-
-    // Persona
     if (this._persona) doc.persona = this._persona;
-
-    // Aesthetic
     if (this._aesthetic) doc.aesthetic = this._aesthetic;
-
-    // Body
     if (this._body) doc.body = this._body;
-
-    // Footer
     if (this._footer) doc.footer = this._footer;
 
-    return doc;
+    return new AnmlDocumentInstance(doc);
   }
 
-  /**
-   * Convenience: build and serialize to XML.
-   */
+  /** Convenience: build and serialize to XML. */
   toXml(): string {
-    return toXml(this.build());
+    return toXml(this.build().data);
   }
 
-  /**
-   * Convenience: build and serialize to JSON.
-   */
+  /** Convenience: build and serialize to JSON. */
   toJson(): string {
-    return toJson(this.build());
+    return toJson(this.build().data);
   }
 }
+
+// Re-export for convenience — allows: import { AnmlDocument } from "./builder.js"
+export { AnmlDocumentInstance as AnmlDocument };
+

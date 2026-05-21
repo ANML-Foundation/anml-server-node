@@ -2,7 +2,7 @@
  * ANML 1.0 Discovery — Well-known URI handler and Link header generation.
  */
 
-import { CONTENT_TYPE_XML, CONTENT_TYPE_JSON } from "./serializer.js";
+import { CONTENT_TYPE_XML } from "./serializer.js";
 
 /**
  * The well-known path for ANML discovery per RFC 8615.
@@ -10,16 +10,17 @@ import { CONTENT_TYPE_XML, CONTENT_TYPE_JSON } from "./serializer.js";
 export const WELL_KNOWN_PATH = "/.well-known/anml";
 
 /**
+ * Returns the well-known path string.
+ */
+export function wellKnownPath(): string {
+  return WELL_KNOWN_PATH;
+}
+
+/**
  * Generate an HTTP Link header value advertising ANML support.
  *
  * @param anmlUrl - The URL where the ANML document is served
  * @returns A Link header value string
- *
- * @example
- * ```
- * res.setHeader("Link", linkHeader("/api/checkout"));
- * // <https://example.com/api/checkout>; rel="alternate"; type="application/anml+xml"
- * ```
  */
 export function linkHeader(anmlUrl: string): string {
   return `<${anmlUrl}>; rel="alternate"; type="${CONTENT_TYPE_XML}"`;
@@ -30,11 +31,6 @@ export function linkHeader(anmlUrl: string): string {
  *
  * @param anmlUrl - The URL where the ANML document is served
  * @returns An HTML link element string
- *
- * @example
- * ```
- * // <link rel="alternate" type="application/anml+xml" href="/api/checkout" />
- * ```
  */
 export function htmlLinkTag(anmlUrl: string): string {
   return `<link rel="alternate" type="${CONTENT_TYPE_XML}" href="${anmlUrl}" />`;
@@ -42,7 +38,6 @@ export function htmlLinkTag(anmlUrl: string): string {
 
 /**
  * Generate a JSON discovery document for the well-known endpoint.
- * This is a minimal valid ANML document indicating service support.
  */
 export function discoveryDocument(opts?: {
   title?: string;
@@ -78,5 +73,3 @@ export function discoveryDocument(opts?: {
 
   return JSON.stringify(doc, null, 2);
 }
-
-export { CONTENT_TYPE_XML, CONTENT_TYPE_JSON };

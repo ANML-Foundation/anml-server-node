@@ -14,12 +14,6 @@ export type SriAlgorithm = "sha256" | "sha384" | "sha512";
  * @param data - The data to hash (Buffer or string)
  * @param algorithm - The hash algorithm (default: sha384)
  * @returns SRI hash string in the format "algorithm-base64hash"
- *
- * @example
- * ```ts
- * const hash = computeSriHash(imageBuffer);
- * // "sha384-oqVuAfXRKap7fdgcCY5uykM6+R9GqQ8K/uxy9rx7HNQlGYl1kPzQho1wx4JwY8wC"
- * ```
  */
 export function computeSriHash(
   data: Buffer | string,

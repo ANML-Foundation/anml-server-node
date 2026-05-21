@@ -4,7 +4,7 @@ import { DocumentBuilder } from "../src/builder.js";
 import type { AnmlDocument } from "../src/types.js";
 
 describe("validate", () => {
-  it("returns no errors for a valid document", () => {
+  it("returns valid for a well-formed document", () => {
     const doc = new DocumentBuilder()
       .title("Valid Document")
       .ttl(300)
@@ -20,37 +20,38 @@ describe("validate", () => {
       .rights("display")
       .build();
 
-    const errors = validate(doc);
-    expect(errors).toHaveLength(0);
+    const result = validate(doc.data);
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
   });
 
   it("reports missing version", () => {
     const doc = { version: "" } as AnmlDocument;
-    const errors = validate(doc);
-
-    expect(errors.some((e) => e.path === "version")).toBe(true);
+    const result = validate(doc);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.path === "version")).toBe(true);
   });
 
   it("warns on unsupported version", () => {
     const doc = { version: "2.0" } as AnmlDocument;
-    const errors = validate(doc);
-
-    const versionError = errors.find((e) => e.path === "version");
+    const result = validate(doc);
+    const versionError = result.errors.find((e) => e.path === "version");
     expect(versionError?.severity).toBe("warning");
+    // Warnings don't make it invalid
+    expect(result.valid).toBe(true);
   });
 
   it("reports negative TTL", () => {
     const doc: AnmlDocument = { version: "1.0", ttl: -1 };
-    const errors = validate(doc);
-
-    expect(errors.some((e) => e.path === "ttl" && e.severity === "error")).toBe(true);
+    const result = validate(doc);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.path === "ttl" && e.severity === "error")).toBe(true);
   });
 
   it("warns on non-integer TTL", () => {
     const doc: AnmlDocument = { version: "1.0", ttl: 3.5 };
-    const errors = validate(doc);
-
-    expect(errors.some((e) => e.path === "ttl" && e.severity === "warning")).toBe(true);
+    const result = validate(doc);
+    expect(result.errors.some((e) => e.path === "ttl" && e.severity === "warning")).toBe(true);
   });
 
   it("reports duplicate step ids", () => {
@@ -65,9 +66,9 @@ describe("validate", () => {
         },
       },
     };
-    const errors = validate(doc);
-
-    expect(errors.some((e) => e.message.includes("Duplicate step id"))).toBe(true);
+    const result = validate(doc);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.message.includes("Duplicate step id"))).toBe(true);
   });
 
   it("reports context step not matching flow", () => {
@@ -75,14 +76,12 @@ describe("validate", () => {
       version: "1.0",
       state: {
         context: { step: "nonexistent" },
-        flow: {
-          step: [{ id: "step1", status: "current" }],
-        },
+        flow: { step: [{ id: "step1", status: "current" }] },
       },
     };
-    const errors = validate(doc);
-
-    expect(errors.some((e) => e.path === "state.context.step")).toBe(true);
+    const result = validate(doc);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.path === "state.context.step")).toBe(true);
   });
 
   it("reports duplicate action ids", () => {
@@ -95,95 +94,79 @@ describe("validate", () => {
         ],
       },
     };
-    const errors = validate(doc);
-
-    expect(errors.some((e) => e.message.includes("Duplicate action id"))).toBe(true);
+    const result = validate(doc);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.message.includes("Duplicate action id"))).toBe(true);
   });
 
   it("reports action without endpoint", () => {
     const doc: AnmlDocument = {
       version: "1.0",
-      interact: {
-        action: [{ id: "test", endpoint: "" }],
-      },
+      interact: { action: [{ id: "test", endpoint: "" }] },
     };
-    const errors = validate(doc);
-
-    expect(errors.some((e) => e.message.includes("endpoint"))).toBe(true);
+    const result = validate(doc);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.message.includes("endpoint"))).toBe(true);
   });
 
   it("reports invalid HTTP method", () => {
     const doc: AnmlDocument = {
       version: "1.0",
-      interact: {
-        action: [{ id: "test", endpoint: "/api", method: "INVALID" as any }],
-      },
+      interact: { action: [{ id: "test", endpoint: "/api", method: "INVALID" as any }] },
     };
-    const errors = validate(doc);
-
-    expect(errors.some((e) => e.message.includes("Invalid HTTP method"))).toBe(true);
+    const result = validate(doc);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.message.includes("Invalid HTTP method"))).toBe(true);
   });
 
   it("reports ask referencing non-existent action", () => {
     const doc: AnmlDocument = {
       version: "1.0",
-      interact: {
-        action: [{ id: "real-action", endpoint: "/api" }],
-      },
-      knowledge: {
-        ask: [{ field: "email", action: "fake-action" }],
-      },
+      interact: { action: [{ id: "real-action", endpoint: "/api" }] },
+      knowledge: { ask: [{ field: "email", action: "fake-action" }] },
     };
-    const errors = validate(doc);
-
-    expect(errors.some((e) => e.message.includes("fake-action"))).toBe(true);
+    const result = validate(doc);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.message.includes("fake-action"))).toBe(true);
   });
 
   it("reports ask without field", () => {
     const doc: AnmlDocument = {
       version: "1.0",
-      knowledge: {
-        ask: [{ field: "", action: "submit" }],
-      },
+      knowledge: { ask: [{ field: "", action: "submit" }] },
     };
-    const errors = validate(doc);
-
-    expect(errors.some((e) => e.path.includes("ask") && e.message.includes("field"))).toBe(true);
+    const result = validate(doc);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.path.includes("ask") && e.message.includes("field"))).toBe(true);
   });
 
   it("reports inform without content", () => {
     const doc: AnmlDocument = {
       version: "1.0",
-      knowledge: {
-        inform: [{ content: "" }],
-      },
+      knowledge: { inform: [{ content: "" }] },
     };
-    const errors = validate(doc);
-
-    expect(errors.some((e) => e.message.includes("content"))).toBe(true);
+    const result = validate(doc);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.message.includes("content"))).toBe(true);
   });
 
   it("reports invalid disclosure requires value", () => {
     const doc: AnmlDocument = {
       version: "1.0",
-      constraints: {
-        disclosure: [{ field: "email", requires: "invalid" as any }],
-      },
+      constraints: { disclosure: [{ field: "email", requires: "invalid" as any }] },
     };
-    const errors = validate(doc);
-
-    expect(errors.some((e) => e.message.includes("Invalid requires value"))).toBe(true);
+    const result = validate(doc);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.message.includes("Invalid requires value"))).toBe(true);
   });
 
   it("reports invalid usage in footer rights", () => {
     const doc: AnmlDocument = {
       version: "1.0",
-      footer: {
-        rights: { usage: "invalid" as any },
-      },
+      footer: { rights: { usage: "invalid" as any } },
     };
-    const errors = validate(doc);
-
-    expect(errors.some((e) => e.message.includes("Invalid usage value"))).toBe(true);
+    const result = validate(doc);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.message.includes("Invalid usage value"))).toBe(true);
   });
 });

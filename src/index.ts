@@ -6,7 +6,7 @@
 
 // Types
 export type {
-  AnmlDocument,
+  AnmlDocument as AnmlDocumentData,
   HttpMethod,
   StepStatus,
   DisclosureRequirement,
@@ -60,7 +60,7 @@ export type {
 } from "./types.js";
 
 // Builder
-export { DocumentBuilder } from "./builder.js";
+export { AnmlDocumentInstance as AnmlDocument, DocumentBuilder } from "./builder.js";
 export type {
   StepInput,
   ParamInput,
@@ -68,23 +68,26 @@ export type {
   AskInput,
   MediaInput,
   PersonaInput,
-  BrandInput,
 } from "./builder.js";
 
 // Serializer
 export {
   toXml,
   toJson,
-  negotiate,
+  serialize,
   CONTENT_TYPE_XML,
   CONTENT_TYPE_JSON,
   ANML_NAMESPACE,
 } from "./serializer.js";
-export type { NegotiatedResponse } from "./serializer.js";
+
+// Negotiation
+export { negotiateContentType, parseAcceptHeader } from "./negotiation.js";
+export type { AcceptEntry } from "./negotiation.js";
 
 // Discovery
 export {
   WELL_KNOWN_PATH,
+  wellKnownPath,
   linkHeader,
   htmlLinkTag,
   discoveryDocument,
@@ -92,7 +95,7 @@ export {
 
 // Validation
 export { validate } from "./validation.js";
-export type { ValidationError } from "./validation.js";
+export type { ValidationError, ValidationResult } from "./validation.js";
 
 // Integrity
 export {
@@ -101,3 +104,25 @@ export {
   verifySriHash,
 } from "./integrity.js";
 export type { SriAlgorithm } from "./integrity.js";
+
+// Trust
+export {
+  verifyTrust,
+  parseTrustRecord,
+  generateTrustRecord,
+} from "./trust.js";
+export type { TrustRecord, TrustVerificationResult } from "./trust.js";
+
+// Middleware
+export { anmlMiddleware, anmlFastifyPlugin } from "./middleware.js";
+export type { AnmlMiddlewareOptions } from "./middleware.js";
+
+// Errors
+export {
+  AnmlError,
+  AnmlValidationError,
+  AnmlSerializationError,
+  AnmlNegotiationError,
+  AnmlIntegrityError,
+  AnmlTrustError,
+} from "./errors.js";
